@@ -1,0 +1,17 @@
+database:
+  host: localhost
+  port: 5436
+  username: postgres2
+  password: 1234
+  database_name: postgres
+  airflow_host: db
+
+tablas:
+  train: train
+  stores: stores
+  oil: oil
+  holidays_events: holidays_events
+  transactions: transactions
+
+
+target: sales
