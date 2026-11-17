@@ -1,0 +1,133 @@
+services:
+  db:
+    container_name: ${DB_CONTAINER_NAME}
+    image: ${DB_IMAGE}
+    ports:
+      - "${DB_HOST}:${DB_PORT}"
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    restart: always
+    networks:
+      -  default
+
+  python:
+    container_name: ${PYTHON_CONTAINER_NAME}
+    build: 
+      context: ./python 
+      dockerfile: dockerfile
+    depends_on:
+      - db
+    restart: "no"
+
+  init:
+    container_name: ${INIT_CONTAINER_NAME}
+    build: 
+      context: ./airflow
+      dockerfile: dockerfile
+    image: proyecto-airflow:latest
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_AIRFLOW}"
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/logs:/opt/airflow/logs
+      - ../airflow/src:/opt/airflow/src
+      - ../airflow/scripts:/opt/airflow/scripts
+      - ../airflow/data:/opt/airflow/data
+    depends_on:
+      - db
+    restart: "no"
+    command: 
+      - db
+      - migrate
+    networks:
+      - default
+
+  api-server:
+    container_name: ${API_SERVER_CONTAINER_NAME}
+    build: 
+      context: ./airflow
+      dockerfile: dockerfile
+    image: proyecto-airflow:latest
+    ports:
+      - "${API_SERVER_PORT}:8080"
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_AIRFLOW}"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "humberto:admin"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://api-server:8080/execution/"
+      AIRFLOW__CORE__INTERNAL_API_SECRET_KEY: ${AIRFLOW__CORE__INTERNAL_API_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET}
+      PYTHONPATH: /opt/airflow/src
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/logs:/opt/airflow/logs
+      - ../airflow/src:/opt/airflow/src
+      - ../airflow/scripts:/opt/airflow/scripts
+      - ../airflow/data:/opt/airflow/data
+    depends_on:
+      - init
+    restart: always
+    command: api-server
+    networks:
+      - default
+  
+  dags-airflow:
+    container_name: ${DAGS_CONTAINER_NAME}
+    build: 
+      context: ./airflow
+      dockerfile: dockerfile
+    image: proyecto-airflow:latest
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_AIRFLOW}"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "humberto:admin"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://api-server:8080/execution/"
+      AIRFLOW__CORE__INTERNAL_API_SECRET_KEY: ${AIRFLOW__CORE__INTERNAL_API_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET}
+      PYTHONPATH: /opt/airflow/src
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/logs:/opt/airflow/logs
+      - ../airflow/src:/opt/airflow/src
+      - ../airflow/scripts:/opt/airflow/scripts
+      - ../airflow/data:/opt/airflow/data
+    depends_on:
+      - init
+    restart: always
+    command: dags-processor
+    networks:
+      - default
+  
+  scheduler:
+    container_name: ${SCHEDULER_CONTAINER_NAME}
+    build: 
+      context: ./airflow
+      dockerfile: dockerfile
+    image: proyecto-airflow:latest
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_AIRFLOW}"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "humberto:admin"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://api-server:8080/execution/"
+      AIRFLOW__CORE__INTERNAL_API_SECRET_KEY: ${AIRFLOW__CORE__INTERNAL_API_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET}
+      PYTHONPATH: /opt/airflow/src
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/logs:/opt/airflow/logs
+      - ../airflow/src:/opt/airflow/src
+      - ../airflow/scripts:/opt/airflow/scripts
+      - ../airflow/data:/opt/airflow/data
+    depends_on:
+      - init
+    restart: always
+    command: scheduler
+    networks:
+      - default
+
+volumes:
+  postgres_db:
+
+networks:
+  default:
