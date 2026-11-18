@@ -5,8 +5,4 @@ seaborn
 PyYAML
 SQLAlchemy
 joblib
-statsmodelsnumpy 
-matplotlib 
-seaborn 
-yaml
-sqlalchemy
+statsmodels
